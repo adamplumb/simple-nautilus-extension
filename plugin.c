@@ -2,14 +2,8 @@
 /* Nautilus extension headers */
 #include <libnautilus-extension/nautilus-extension-types.h>
 #include <libnautilus-extension/nautilus-file-info.h>
-#include <libnautilus-extension/nautilus-info-provider.h>
 #include <libnautilus-extension/nautilus-menu-provider.h>
-#include <libnautilus-extension/nautilus-property-page-provider.h>
 
-#include <gtk/gtktable.h>
-#include <gtk/gtkvbox.h>
-#include <gtk/gtkhbox.h>
-#include <gtk/gtklabel.h>
 #include <string.h>
 #include <time.h>
 
@@ -47,7 +41,9 @@ static GList * foo_extension_get_toolbar_items (NautilusMenuProvider *provider,
 #endif
 
 /* command callback */
-static void do_stuff_cb (NautilusMenuItem *item, gpointer user_data);
+static gboolean bloop (NautilusMenuProvider *provider, gpointer user_data);
+
+NautilusMenuItem *some_item;
 
 void nautilus_module_initialize (GTypeModule  *module)
 {
@@ -59,6 +55,10 @@ void nautilus_module_initialize (GTypeModule  *module)
 void nautilus_module_shutdown (void)
 {
         /* Any module-specific shutdown */
+    if (some_item) {
+        some_item = NULL;
+        g_free(some_item);
+    }
 }
 
 void nautilus_module_list_types (const GType **types,
@@ -124,74 +124,41 @@ static GList * foo_extension_get_file_items (NautilusMenuProvider *provider,
                 GtkWidget *window,
                 GList *files)
 {
-        NautilusMenuItem *item;
-        GList *l;
-        GList *ret;
+        GList *ret; 
 
-#if 0
-        /* This extension only operates on selections that include only
-         * foo files */
-        for (l = files; l != NULL; l = l->next) {
-                NautilusFileInfo *file = NAUTILUS_FILE_INFO (l->data);
-                if (!nautilus_file_is_mime_type (file, "application/x-foo")) {
-                        return;
-                }
-        }
-#endif
+        g_print("get_file_items()\n");
 
-        for (l = files; l != NULL; l = l->next) {
-                NautilusFileInfo *file = NAUTILUS_FILE_INFO (l->data);
-                char *name;
-                name = nautilus_file_info_get_name (file);
-                g_print ("selected %s\n", name);
-                g_free (name);
+        if (some_item == NULL) {
+            if (g_list_length(files) > 0) {
+                g_print("Adding timeout\n");
+                g_timeout_add_seconds(1, (GSourceFunc) bloop, provider);                
+            }
+
+            ret = NULL;
+        } else {
+            g_print("Returning cached list\n");
+            ret = g_list_append (NULL, some_item);            
         }
 
-        item = nautilus_menu_item_new ("FooExtension::do_stuff",
-                                       "Do Foo Stuff",
-                                       "Do important foo-related stuff to the selected files",
-                                       NULL /* icon name */);
-        g_signal_connect (item, "activate", G_CALLBACK (do_stuff_cb), provider);
-        g_object_set_data_full ((GObject*) item, "foo_extension_files",
-                                nautilus_file_info_list_copy (files),
-                                (GDestroyNotify)nautilus_file_info_list_free);
-        ret = g_list_append (NULL, item);
-
+        NautilusMenuItem *item = nautilus_menu_item_new ("FooExtension::synced",
+                                   "Always here",
+                                   "Nothing",
+                                   NULL /* icon name */);
+        ret = g_list_append(ret, item);        
         return ret;
 }
 
-/* samples for more menu fillers */
-#if 0 
-static GList * foo_extension_get_background_items (NautilusMenuProvider *provider,
-                GtkWidget *window,
-                NautilusFileInfo *current_folder)
-{
-        /* No background items */
-        return NULL;
-}
+static gboolean bloop (NautilusMenuProvider *provider, gpointer user_data) {
+    g_print("bloop\n");
 
-static GList * foo_extension_get_toolbar_items (NautilusMenuProvider *provider,
-                GtkWidget *window,
-                NautilusFileInfo *current_folder)
-{
-        /* No toolbar items */
-        return NULL;
-}
-#endif
+    if (some_item == NULL) {
+        some_item = nautilus_menu_item_new ("FooExtension::sometimes",
+                                   "Sometimes here",
+                                   "Do important foo-related stuff to the selected files",
+                                   NULL /* icon name */);
 
-static void do_stuff_cb (NautilusMenuItem *item,
-                         gpointer user_data)
-{
-        GList *files;
-        GList *l;
+        nautilus_menu_provider_emit_items_updated_signal(provider);
+    }
 
-        files = g_object_get_data ((GObject *) item, "foo_extension_files");
-
-        for (l = files; l != NULL; l = l->next) {
-                NautilusFileInfo *file = NAUTILUS_FILE_INFO (l->data);
-                char *name;
-                name = nautilus_file_info_get_name (file);
-                g_print ("doing stuff with %s\n", name);
-                g_free (name);
-        }
+    return FALSE;
 }

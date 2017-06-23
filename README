@@ -1,7 +1,4 @@
-This is a very simple example for a Gnome Nautilus Extension
-
-I assembled this package because there was no simple compiling example
-demonstrating how to develop a C context menu extension for Nautilus.
+This is a very simple example for a Gnome Nautilus Extension that I modified to show that asynchronous menu items are not getting updated.
 
 To compile and install this extension just do
 
@@ -11,24 +8,10 @@ and as root
 
   make install
 
-restart nautilus by logging out and back in or restarting it manually
-and you should see a "Do Foo Stuff" context menu item when you right
-click on any file in Nautilus.
+restart nautilus by logging out and back in or restart it manually.
 
-For further information see:
+To reproduce:
 
-  http://www.hvoigt.net/dev/nautilus-extensions-tutor.html
-
-All code was blatantly copied from the specification at
-
-  http://taschenorakel.de/svn/repos/bulldozer/tags/release-0.1.0/documentation/NautilusExtensions.html
-
-If you like it and are interested in a more real life example have look at
-git-cheetah:
-
-  http://repo.or.cz/w/git-cheetah.git
-
-
-Heiko Voigt
-Göttingen
-October 2009
+ 1. Start up nautilus
+ 2. Right-click on a file.  The 'Always here' item should be present.  Keep the context menu open.  A timeout will fire after 1 second that generates a second menu item.
+ 3. My expectation is that the menu item will add a second menu item called 'Sometimes here'.  But nothing is added.  If you clear the context menu and then right-click again you should see the 'Sometimes here' item.
