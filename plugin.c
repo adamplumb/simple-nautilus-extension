@@ -42,8 +42,7 @@ static GList * foo_extension_get_toolbar_items (NautilusMenuProvider *provider,
 
 /* command callback */
 static gboolean bloop (NautilusMenuProvider *provider, gpointer user_data);
-
-NautilusMenuItem *some_item;
+static gboolean show_item = FALSE;
 
 void nautilus_module_initialize (GTypeModule  *module)
 {
@@ -55,10 +54,6 @@ void nautilus_module_initialize (GTypeModule  *module)
 void nautilus_module_shutdown (void)
 {
         /* Any module-specific shutdown */
-    if (some_item) {
-        some_item = NULL;
-        g_free(some_item);
-    }
 }
 
 void nautilus_module_list_types (const GType **types,
@@ -124,20 +119,22 @@ static GList * foo_extension_get_file_items (NautilusMenuProvider *provider,
                 GtkWidget *window,
                 GList *files)
 {
-        GList *ret; 
+        GList *ret = NULL; 
 
         g_print("get_file_items()\n");
 
-        if (some_item == NULL) {
+        if (show_item) {
+            g_print("Returning full list\n");
+            NautilusMenuItem *item = nautilus_menu_item_new ("FooExtension::sometimes",
+                                   "Sometimes here",
+                                   "Do important foo-related stuff to the selected files",
+                                   NULL /* icon name */);
+            ret = g_list_append (NULL, item);
+        } else {
             if (g_list_length(files) > 0) {
                 g_print("Adding timeout\n");
                 g_timeout_add_seconds(1, (GSourceFunc) bloop, provider);                
             }
-
-            ret = NULL;
-        } else {
-            g_print("Returning cached list\n");
-            ret = g_list_append (NULL, some_item);            
         }
 
         NautilusMenuItem *item = nautilus_menu_item_new ("FooExtension::synced",
@@ -149,16 +146,13 @@ static GList * foo_extension_get_file_items (NautilusMenuProvider *provider,
 }
 
 static gboolean bloop (NautilusMenuProvider *provider, gpointer user_data) {
-    g_print("bloop\n");
+    g_print("Toggling the Sometimes here item\n");
 
-    if (some_item == NULL) {
-        some_item = nautilus_menu_item_new ("FooExtension::sometimes",
-                                   "Sometimes here",
-                                   "Do important foo-related stuff to the selected files",
-                                   NULL /* icon name */);
-
-        nautilus_menu_provider_emit_items_updated_signal(provider);
+    if (!show_item) {
+        show_item = TRUE;
     }
+
+    nautilus_menu_provider_emit_items_updated_signal(provider);
 
     return FALSE;
 }
